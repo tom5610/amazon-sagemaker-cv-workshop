@@ -42,7 +42,7 @@ def _get_datasets(training_dir, validation_dir, batch_size):
 
     # training dataset
     train_data_multi = train_data_generator.flow_from_directory(
-        directory = train_data_dir,
+        directory = training_dir,
         target_size = (HEIGHT, WIDTH),
         class_mode = 'categorical',
         batch_size = batch_size,
@@ -57,7 +57,7 @@ def _get_datasets(training_dir, validation_dir, batch_size):
 
     # testing dataset
     validation_data_multi = validation_data_generator.flow_from_directory(
-        directory = test_data_dir,
+        directory = validation_dir,
         target_size = (HEIGHT, WIDTH),
         class_mode = 'categorical',
         batch_size = batch_size,
@@ -98,7 +98,7 @@ def _train(args):
     callbacks = _get_callbacks()
     
     # fit the training data
-    training_data, validation_data = _get_datasets(args.training_data_dir, args.validation_data_dir, args.batch_size)
+    training_data, validation_data = _get_datasets(args.training, args.validation, args.batch_size)
     
     history = model.fit(
         training_data, 
@@ -112,11 +112,22 @@ def _train(args):
     # output the last epoch metrics: validation loss & specified metrics
     metric_names = list(history.history)
     print(
-        "Validation results: "
+        "Training results: "
         + "; ".join(map(
             lambda i: f"{metric_names[i]}={history.history[metric_names[i]][-1]:.5f}", range(len(metric_names))
         ))
     )
+    
+    ###### Save Keras model for TensorFlow Serving ############
+    export_path = f"{args.model_dir}/1"
+
+    tf.keras.models.save_model(
+        model,
+        export_path,
+        overwrite=True,
+        include_optimizer=True
+    )
+
     
 
 if __name__ == "__main__":
@@ -166,7 +177,7 @@ if __name__ == "__main__":
     parser.add_argument("--host", type=str, default=ast.literal_eval(os.environ["SM_HOSTS"]))
     parser.add_argument("--current-host", type=str, default=os.environ["SM_CURRENT_HOST"])
     parser.add_argument("--model-dir", type=str, default=os.environ["SM_MODEL_DIR"])
-    parser.add_argument("--training-data-dir", type=str, default=os.environ["SM_CHANNEL_TRAINING"])
-    parser.add_argument("--validation-data-dir", type=str, default=os.environ["SM_CHANNEL_VALIDATION"])
+    parser.add_argument("--training", type=str, default=os.environ["SM_CHANNEL_TRAINING"])
+    parser.add_argument("--validation", type=str, default=os.environ["SM_CHANNEL_VALIDATION"])
 
     _train(parser.parse_args())

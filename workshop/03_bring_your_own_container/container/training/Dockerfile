@@ -1,7 +1,8 @@
 FROM tensorflow/tensorflow:2.4.1-gpu
 
-# install the SageMaker Training Tookit
-RUN pip3 install sagemaker-training
+# install python packages
+COPY requirements.txt /tmp/requirements.txt
+RUN pip3 install -r /tmp/requirements.txt
 
 # copy the training script inside the container
 COPY train.py /opt/ml/code/train.py
